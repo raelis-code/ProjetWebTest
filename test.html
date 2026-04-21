@@ -1,11 +1,574 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-    <title>Ma première page</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur de CV interactif</title>
+<style>
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #242424;
+    --bg-tertiary: #2e2e2e;
+    --bg-card: #1f1f1f;
+    --border: rgba(255,255,255,0.1);
+    --border-hover: rgba(255,255,255,0.2);
+    --text-primary: #e8e8e8;
+    --text-secondary: #999;
+    --text-hint: #666;
+    --accent: #185FA5;
+    --accent-light: #378ADD;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-primary); color: var(--text-primary); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* TOP BAR */
+  .top-bar { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .top-bar h1 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  .top-bar p { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* TEMPLATE PICKER */
+  .tpl-picker { display: flex; gap: 12px; padding: 1rem 1.5rem; background: var(--bg-secondary); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tpl-thumb { border: 2px solid var(--border); border-radius: var(--radius-lg); cursor: pointer; overflow: hidden; flex-shrink: 0; width: 100px; background: var(--bg-card); transition: border-color .2s; }
+  .tpl-thumb:hover { border-color: var(--border-hover); }
+  .tpl-thumb.active { border-color: var(--accent-light); }
+  .tpl-thumb-inner { height: 110px; }
+  .tpl-label { font-size: 11px; text-align: center; padding: 5px 4px; color: var(--text-secondary); font-weight: 500; }
+  .tpl-thumb.active .tpl-label { color: var(--accent-light); }
+
+  /* MAIN LAYOUT */
+  .main { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 220px); min-height: 550px; }
+
+  /* FORM PANE */
+  .form-pane { overflow-y: auto; border-right: 1px solid var(--border); }
+  .form-pane::-webkit-scrollbar { width: 4px; }
+  .form-pane::-webkit-scrollbar-track { background: transparent; }
+  .form-pane::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+  .form-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+  .form-section-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .8px; margin-bottom: .85rem; }
+  .fl { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .fl label { font-size: 11px; color: var(--text-secondary); }
+  .fl input, .fl textarea, .fl select {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    font-size: 13px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .fl input:focus, .fl textarea:focus, .fl select:focus { border-color: var(--accent-light); }
+  .fl textarea { resize: vertical; min-height: 60px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* PHOTO */
+  .photo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .photo-circle {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--bg-tertiary); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--text-hint); overflow: hidden; flex-shrink: 0; cursor: pointer;
+    text-align: center; line-height: 1.3; transition: border-color .2s;
+  }
+  .photo-circle:hover { border-color: var(--accent-light); }
+  .photo-circle img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .btn-upload {
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 7px 12px; font-size: 12px; cursor: pointer;
+    background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;
+    transition: border-color .2s, background .2s;
+  }
+  .btn-upload:hover { border-color: var(--border-hover); background: var(--bg-secondary); }
+
+  /* SKILLS */
+  .skill-edit-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .skill-edit-row input[type=text] {
+    flex: 0 0 90px; border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 5px 8px; font-size: 12px; background: var(--bg-tertiary); color: var(--text-primary);
+    font-family: inherit; outline: none;
+  }
+  .skill-edit-row input[type=range] { flex: 1; accent-color: var(--accent-light); cursor: pointer; }
+  .skill-pct-lbl { font-size: 11px; color: var(--accent-light); min-width: 30px; text-align: right; font-weight: 600; }
+  .del-btn { background: none; border: none; color: #A32D2D; cursor: pointer; font-size: 13px; padding: 0 4px; flex-shrink: 0; }
+  .del-btn:hover { color: #E24B4A; }
+  .add-btn-sm {
+    background: none; border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 6px 11px; font-size: 11px; cursor: pointer; color: var(--text-secondary);
+    font-family: inherit; margin-top: 4px; transition: border-color .2s, color .2s;
+  }
+  .add-btn-sm:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+  /* EDU / EXP BLOCKS */
+  .entry-block {
+    background: var(--bg-tertiary); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 10px; margin-bottom: 8px;
+  }
+  .entry-block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .entry-block-label { font-size: 11px; color: var(--text-hint); }
+
+  /* COLOR SWATCHES */
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .15s; }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.active { border-color: white; }
+
+  /* PREVIEW PANE */
+  .preview-pane { background: var(--bg-secondary); padding: 1rem; overflow-y: auto; }
+  .preview-pane::-webkit-scrollbar { width: 4px; }
+  .preview-pane::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+  .preview-wrap {
+    background: #1c1c1c; border-radius: var(--radius-lg);
+    border: 1px solid var(--border); overflow: hidden; min-height: 480px;
+  }
+
+  /* EXPORT BAR */
+  .export-bar {
+    background: var(--bg-card); border-top: 1px solid var(--border);
+    padding: .85rem 1.5rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .export-lbl { font-size: 12px; color: var(--text-secondary); margin-right: 4px; }
+  .btn-exp {
+    padding: 7px 14px; font-size: 12px; font-weight: 500; border-radius: var(--radius-md);
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg-tertiary);
+    color: var(--text-primary); font-family: inherit; transition: border-color .2s, background .2s;
+  }
+  .btn-exp:hover { border-color: var(--border-hover); background: var(--bg-secondary); }
+  .btn-exp.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-exp.primary:hover { background: #0C447C; border-color: #0C447C; }
+  .toast-bar {
+    position: fixed; bottom: 20px; right: 20px; background: #1D9E75; color: white;
+    padding: 9px 16px; border-radius: var(--radius-md); font-size: 13px;
+    display: none; z-index: 999; border: 1px solid #0F6E56;
+  }
+
+  /* NEW SKILL ROW */
+  .new-skill-row { display: flex; gap: 6px; margin-top: 6px; }
+  .new-skill-row input {
+    flex: 1; border: 1px solid var(--border); border-radius: var(--radius-md);
+    padding: 6px 9px; font-size: 12px; background: var(--bg-tertiary);
+    color: var(--text-primary); font-family: inherit; outline: none;
+  }
+  .new-skill-row input:focus { border-color: var(--accent-light); }
+
+  @media (max-width: 700px) {
+    .main { grid-template-columns: 1fr; }
+    .preview-pane { display: none; }
+  }
+</style>
 </head>
 <body>
-    <h1>Bienvenue sur ma page web</h1>
-    <p>Ceci est ma première page HTML.</p>
-    <button onclick="alert('Bonjour !')">Clique moi</button>
+
+<div class="top-bar">
+  <div>
+    <h1>Générateur de CV interactif</h1>
+    <p>Remplissez vos informations — prévisualisation en direct</p>
+  </div>
+</div>
+
+<div class="tpl-picker" id="tplPicker">
+  <div class="tpl-thumb active" onclick="setTpl(0)" id="thumb0">
+    <div class="tpl-thumb-inner" id="mini0"></div>
+    <div class="tpl-label">Classique</div>
+  </div>
+  <div class="tpl-thumb" onclick="setTpl(1)" id="thumb1">
+    <div class="tpl-thumb-inner" id="mini1"></div>
+    <div class="tpl-label">Moderne</div>
+  </div>
+  <div class="tpl-thumb" onclick="setTpl(2)" id="thumb2">
+    <div class="tpl-thumb-inner" id="mini2"></div>
+    <div class="tpl-label">Créatif</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="form-pane">
+
+    <div class="form-section">
+      <div class="form-section-title">Photo &amp; identité</div>
+      <div class="photo-row">
+        <div class="photo-circle" id="photoCircle" onclick="document.getElementById('photoFile').click()" title="Cliquer pour ajouter une photo">
+          <span id="photoPlaceholder" style="font-size:10px;text-align:center">Ajouter<br>photo</span>
+        </div>
+        <button class="btn-upload" onclick="document.getElementById('photoFile').click()">Choisir une photo</button>
+        <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+      </div>
+      <div class="grid2">
+        <div class="fl"><label>Prénom</label><input id="f-prenom" value="Mohamed Amine" oninput="render()"></div>
+        <div class="fl"><label>Nom</label><input id="f-nom" value="Ben Ali" oninput="render()"></div>
+      </div>
+      <div class="fl"><label>Titre professionnel</label><input id="f-titre" value="Étudiant Cloud Computing &amp; DevOps" oninput="render()"></div>
+      <div class="grid2">
+        <div class="fl"><label>Email</label><input id="f-email" value="amine@email.com" oninput="render()"></div>
+        <div class="fl"><label>Téléphone</label><input id="f-tel" value="+213 6XX XXX XXX" oninput="render()"></div>
+      </div>
+      <div class="grid2">
+        <div class="fl"><label>LinkedIn</label><input id="f-linkedin" value="linkedin.com/in/amine" oninput="render()"></div>
+        <div class="fl"><label>GitHub</label><input id="f-github" value="github.com/amine" oninput="render()"></div>
+      </div>
+      <div class="fl"><label>Localisation</label><input id="f-loc" value="Algérie" oninput="render()"></div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">À propos</div>
+      <div class="fl">
+        <label>Résumé professionnel</label>
+        <textarea id="f-about" oninput="render()">Étudiant en Master Cloud Computing passionné par les architectures Azure, le DevOps et les systèmes distribués. Expérience en Traffic Manager, AKS et Terraform.</textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Formation</div>
+      <div id="edu-list"></div>
+      <button class="add-btn-sm" onclick="addEdu()">+ Ajouter une formation</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Compétences (glissez le curseur)</div>
+      <div id="skill-list"></div>
+      <div class="new-skill-row">
+        <input id="new-skill-name" placeholder="Nouvelle compétence…">
+        <button class="add-btn-sm" onclick="addSkill()" style="margin-top:0">+ Ajouter</button>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Projets &amp; Expériences</div>
+      <div id="exp-list"></div>
+      <button class="add-btn-sm" onclick="addExp()">+ Ajouter</button>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Couleur du thème</div>
+      <div class="swatches" id="swatches">
+        <div class="swatch active" onclick="setColor('#185FA5')" style="background:#185FA5" data-c="#185FA5"></div>
+        <div class="swatch" onclick="setColor('#1D9E75')" style="background:#1D9E75" data-c="#1D9E75"></div>
+        <div class="swatch" onclick="setColor('#534AB7')" style="background:#534AB7" data-c="#534AB7"></div>
+        <div class="swatch" onclick="setColor('#993C1D')" style="background:#993C1D" data-c="#993C1D"></div>
+        <div class="swatch" onclick="setColor('#993556')" style="background:#993556" data-c="#993556"></div>
+        <div class="swatch" onclick="setColor('#888780')" style="background:#888780" data-c="#888780"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="preview-pane">
+    <div class="preview-wrap" id="preview"></div>
+  </div>
+</div>
+
+<div class="export-bar">
+  <span class="export-lbl">Exporter :</span>
+  <button class="btn-exp primary" onclick="exportHTML()">⬇ Télécharger HTML (thème sombre)</button>
+  <button class="btn-exp" onclick="exportHTMLLight()">⬇ HTML thème clair (impression)</button>
+  <button class="btn-exp" onclick="printCV()">🖨 Imprimer / PDF</button>
+  <button class="btn-exp" onclick="copyCode()">📋 Copier le code</button>
+</div>
+
+<div class="toast-bar" id="toast"></div>
+
+<script>
+let currentTpl = 0;
+let themeColor = '#185FA5';
+let photoData = null;
+
+let skills = [
+  {name:'Azure',pct:88},{name:'Docker',pct:80},{name:'Python',pct:85},
+  {name:'Kubernetes',pct:65},{name:'Terraform',pct:70},{name:'Linux',pct:90}
+];
+let edus = [
+  {degree:'Master — Cloud Computing',school:'Université des Sciences',year:'2023–2025'},
+  {degree:'Licence — Informatique',school:'Faculté des Sciences',year:'2020–2023'}
+];
+let exps = [
+  {title:'Azure Traffic Manager — Failover Multi-régions',org:'Projet académique',year:'2024',desc:"Configuration d'un Traffic Manager Azure avec deux Web Apps (East US / West US), routage et failover automatique."},
+  {title:'Déploiement AKS + Helm',org:'Projet académique',year:'2024',desc:'Orchestration Kubernetes sur Azure AKS avec pipeline CI/CD GitHub Actions.'}
+];
+
+function v(id){return document.getElementById(id).value}
+function esc(s){return s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function initials(){return (v('f-prenom')[0]||'')+(v('f-nom')[0]||'')}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none',2500);
+}
+
+function handlePhoto(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    photoData=ev.target.result;
+    const c=document.getElementById('photoCircle');
+    c.innerHTML=`<img src="${photoData}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    render();
+  };
+  r.readAsDataURL(f);
+}
+
+function setColor(c){
+  themeColor=c;
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('active',s.dataset.c===c));
+  render();
+}
+
+function setTpl(n){
+  currentTpl=n;
+  document.querySelectorAll('.tpl-thumb').forEach((t,i)=>t.classList.toggle('active',i===n));
+  render();
+}
+
+/* ---- RENDER SKILL LIST ---- */
+function renderSkillList(){
+  const el=document.getElementById('skill-list');
+  el.innerHTML='';
+  skills.forEach((s,i)=>{
+    const row=document.createElement('div');
+    row.className='skill-edit-row';
+    row.innerHTML=`<input type="text" value="${esc(s.name)}" oninput="skills[${i}].name=this.value;render()">
+      <input type="range" min="0" max="100" step="1" value="${s.pct}" oninput="skills[${i}].pct=+this.value;this.nextElementSibling.textContent=this.value+'%';render()">
+      <span class="skill-pct-lbl">${s.pct}%</span>
+      <button class="del-btn" onclick="skills.splice(${i},1);renderSkillList();render()">✕</button>`;
+    el.appendChild(row);
+  });
+}
+function addSkill(){
+  const n=document.getElementById('new-skill-name').value.trim();
+  if(!n) return;
+  skills.push({name:n,pct:50});
+  document.getElementById('new-skill-name').value='';
+  renderSkillList(); render();
+}
+
+/* ---- RENDER EDU LIST ---- */
+function renderEduList(){
+  const el=document.getElementById('edu-list');
+  el.innerHTML='';
+  edus.forEach((e,i)=>{
+    const d=document.createElement('div');
+    d.className='entry-block';
+    d.innerHTML=`<div class="entry-block-header"><span class="entry-block-label">Formation ${i+1}</span><button class="del-btn" onclick="edus.splice(${i},1);renderEduList();render()">✕</button></div>
+      <div class="grid2">
+        <div class="fl"><label>Diplôme</label><input value="${esc(e.degree)}" oninput="edus[${i}].degree=this.value;render()"></div>
+        <div class="fl"><label>Établissement</label><input value="${esc(e.school)}" oninput="edus[${i}].school=this.value;render()"></div>
+      </div>
+      <div class="fl"><label>Année</label><input value="${esc(e.year)}" oninput="edus[${i}].year=this.value;render()"></div>`;
+    el.appendChild(d);
+  });
+}
+function addEdu(){edus.push({degree:'Nouvelle formation',school:'Établissement',year:'Année'});renderEduList();render();}
+
+/* ---- RENDER EXP LIST ---- */
+function renderExpList(){
+  const el=document.getElementById('exp-list');
+  el.innerHTML='';
+  exps.forEach((e,i)=>{
+    const d=document.createElement('div');
+    d.className='entry-block';
+    d.innerHTML=`<div class="entry-block-header"><span class="entry-block-label">Entrée ${i+1}</span><button class="del-btn" onclick="exps.splice(${i},1);renderExpList();render()">✕</button></div>
+      <div class="grid2">
+        <div class="fl"><label>Titre</label><input value="${esc(e.title)}" oninput="exps[${i}].title=this.value;render()"></div>
+        <div class="fl"><label>Organisation</label><input value="${esc(e.org)}" oninput="exps[${i}].org=this.value;render()"></div>
+      </div>
+      <div class="fl"><label>Année</label><input value="${esc(e.year)}" oninput="exps[${i}].year=this.value;render()"></div>
+      <div class="fl"><label>Description</label><textarea oninput="exps[${i}].desc=this.value;render()">${esc(e.desc)}</textarea></div>`;
+    el.appendChild(d);
+  });
+}
+function addExp(){exps.push({title:'Nouveau projet',org:'Organisation',year:'2025',desc:'Description...'});renderExpList();render();}
+
+/* ---- PREVIEW HELPERS ---- */
+function photoTag(size,fs){
+  if(photoData) return `<img src="${photoData}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0">`;
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${themeColor}33;display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;color:${themeColor};flex-shrink:0">${initials()}</div>`;
+}
+function skillBar(pct,tc){
+  return `<div style="height:5px;background:#333;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${tc};border-radius:3px"></div></div>`;
+}
+
+/* ---- TEMPLATES (dark) ---- */
+function tpl0(d){
+  const {prenom,nom,titre,email,tel,linkedin,github,loc,about}=d; const tc=themeColor;
+  return `<div style="font-family:Georgia,serif;background:#1c1c1c;min-height:480px">
+    <div style="background:${tc};color:white;padding:24px 28px;display:flex;align-items:center;gap:18px">
+      ${photoTag(72,24)}
+      <div>
+        <div style="font-size:22px;font-weight:700">${prenom} ${nom}</div>
+        <div style="font-size:12px;opacity:.8;margin-top:3px">${titre}</div>
+        <div style="font-size:11px;opacity:.65;margin-top:6px;display:flex;gap:12px;flex-wrap:wrap"><span>${email}</span><span>${tel}</span><span>${loc}</span></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:200px 1fr">
+      <div style="background:#252525;padding:18px 16px;border-right:1px solid #333">
+        <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;border-bottom:2px solid ${tc};padding-bottom:4px">Compétences</div>
+        ${skills.map(s=>`<div style="margin-bottom:9px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:#ccc">${s.name}</span><span style="color:${tc};font-weight:600">${s.pct}%</span></div>${skillBar(s.pct,tc)}</div>`).join('')}
+        <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px;border-bottom:2px solid ${tc};padding-bottom:4px">Contact</div>
+        <div style="font-size:11px;color:#aaa;line-height:2">${linkedin}<br>${github}</div>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;border-bottom:2px solid ${tc};padding-bottom:4px">Profil</div>
+        <div style="font-size:12px;color:#bbb;line-height:1.6;margin-bottom:16px">${about}</div>
+        <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;border-bottom:2px solid ${tc};padding-bottom:4px">Formation</div>
+        ${edus.map(e=>`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#ddd">${e.degree}</div><div style="font-size:11px;color:#888">${e.school} · ${e.year}</div></div>`).join('')}
+        <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin:14px 0 10px;border-bottom:2px solid ${tc};padding-bottom:4px">Projets &amp; Expériences</div>
+        ${exps.map(e=>`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font-size:12px;font-weight:700;color:#ddd">${e.title}</span><span style="font-size:10px;color:${tc};background:${tc}22;padding:2px 7px;border-radius:10px;white-space:nowrap;flex-shrink:0">${e.year}</span></div><div style="font-size:11px;color:#777;margin-bottom:3px">${e.org}</div><div style="font-size:11px;color:#bbb;line-height:1.5">${e.desc}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function tpl1(d){
+  const {prenom,nom,titre,email,tel,linkedin,github,loc,about}=d; const tc=themeColor;
+  return `<div style="font-family:Arial,sans-serif;background:#1c1c1c;min-height:480px">
+    <div style="padding:24px 28px;display:flex;align-items:center;gap:18px;border-bottom:3px solid ${tc}">
+      ${photoTag(64,22)}
+      <div style="flex:1">
+        <div style="font-size:22px;font-weight:700;color:#eee">${prenom} <span style="color:${tc}">${nom}</span></div>
+        <div style="font-size:12px;color:#888;margin-top:2px;font-style:italic">${titre}</div>
+      </div>
+      <div style="text-align:right;font-size:11px;color:#888;line-height:2"><div>${email}</div><div>${tel}</div><div>${loc}</div></div>
+    </div>
+    <div style="padding:18px 28px">
+      <div style="background:${tc}18;border-left:4px solid ${tc};padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px">
+        <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Profil</div>
+        <div style="font-size:12px;color:#bbb;line-height:1.6">${about}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Formation</div>
+          ${edus.map(e=>`<div style="margin-bottom:10px;padding-left:10px;border-left:2px solid ${tc}55"><div style="font-size:12px;font-weight:700;color:#ddd">${e.degree}</div><div style="font-size:11px;color:#777">${e.school}</div><div style="font-size:10px;color:${tc};margin-top:2px">${e.year}</div></div>`).join('')}
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:.8px;margin:14px 0 10px">Compétences</div>
+          ${skills.map(s=>`<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="color:#ccc">${s.name}</span><span style="color:${tc};font-weight:600">${s.pct}%</span></div>${skillBar(s.pct,tc)}</div>`).join('')}
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px">Liens</div>
+          <div style="font-size:11px;color:${tc};line-height:2">${linkedin}<br>${github}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Projets</div>
+          ${exps.map(e=>`<div style="margin-bottom:12px;padding:10px;background:#252525;border-radius:8px;border:1px solid #333"><div style="display:flex;justify-content:space-between;margin-bottom:2px;gap:6px"><span style="font-size:12px;font-weight:700;color:#ddd">${e.title}</span><span style="font-size:10px;color:${tc};white-space:nowrap;flex-shrink:0">${e.year}</span></div><div style="font-size:10px;color:#666;margin-bottom:4px">${e.org}</div><div style="font-size:11px;color:#bbb;line-height:1.5">${e.desc}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function tpl2(d){
+  const {prenom,nom,titre,email,tel,loc,linkedin,github,about}=d; const tc=themeColor;
+  const rings=skills.slice(0,6).map(s=>{
+    const r=26,c=2*Math.PI*r,off=c*(1-s.pct/100);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+      <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="#333" stroke-width="5"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${tc}" stroke-width="5" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 32 32)"/><text x="32" y="36" text-anchor="middle" fill="${tc}" font-size="11" font-weight="700">${s.pct}%</text></svg>
+      <span style="font-size:10px;color:#999;text-align:center;max-width:56px">${s.name}</span></div>`;
+  }).join('');
+  return `<div style="font-family:'Helvetica Neue',Arial,sans-serif;background:#1c1c1c;min-height:480px">
+    <div style="background:${tc};padding:26px 28px;color:white">
+      <div style="display:flex;align-items:center;gap:18px">
+        ${photoTag(76,26)}
+        <div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-.3px">${prenom}</div>
+          <div style="font-size:24px;font-weight:300;letter-spacing:-.3px">${nom}</div>
+          <div style="font-size:12px;opacity:.8;margin-top:5px;background:rgba(255,255,255,0.15);padding:3px 10px;border-radius:20px;display:inline-block">${titre}</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:16px;font-size:11px;opacity:.8;flex-wrap:wrap">
+        <span>✉ ${email}</span><span>☎ ${tel}</span><span>📍 ${loc}</span>
+      </div>
+    </div>
+    <div style="padding:18px 28px">
+      <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">À propos</div>
+      <div style="font-size:12px;color:#bbb;line-height:1.6;margin-bottom:18px">${about}</div>
+      <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Compétences</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">${rings}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Formation</div>
+          ${edus.map(e=>`<div style="margin-bottom:10px"><div style="font-size:12px;font-weight:700;color:#ddd">${e.degree}</div><div style="font-size:11px;color:#777">${e.school} · <span style="color:${tc}">${e.year}</span></div></div>`).join('')}
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">Liens</div>
+          <div style="font-size:11px;color:${tc};line-height:2">${linkedin}<br>${github}</div>
+        </div>
+        <div>
+          <div style="font-size:9px;font-weight:700;color:${tc};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Projets</div>
+          ${exps.map(e=>`<div style="margin-bottom:12px"><div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px"><div style="width:7px;height:7px;border-radius:50%;background:${tc};flex-shrink:0;margin-top:4px"></div><span style="font-size:12px;font-weight:700;color:#ddd">${e.title}</span></div><div style="font-size:10px;color:${tc};margin:1px 0 3px;padding-left:13px">${e.org} · ${e.year}</div><div style="font-size:11px;color:#bbb;line-height:1.5;padding-left:13px">${e.desc}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function getData(){
+  return {prenom:v('f-prenom'),nom:v('f-nom'),titre:v('f-titre'),email:v('f-email'),tel:v('f-tel'),linkedin:v('f-linkedin'),github:v('f-github'),loc:v('f-loc'),about:v('f-about')};
+}
+
+function getHTML(){return [tpl0,tpl1,tpl2][currentTpl](getData());}
+
+function render(){
+  document.getElementById('preview').innerHTML=getHTML();
+  buildMinis();
+}
+
+function buildMinis(){
+  const tc=themeColor;
+  [0,1,2].forEach(i=>{
+    const m=document.getElementById('mini'+i);
+    if(i===0){m.innerHTML=`<div style="background:${tc};height:28px;display:flex;align-items:center;padding:0 5px;gap:3px"><div style="width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,0.35)"></div><div><div style="background:rgba(255,255,255,0.85);height:3px;width:32px;border-radius:2px;margin-bottom:2px"></div><div style="background:rgba(255,255,255,0.45);height:2px;width:20px;border-radius:1px"></div></div></div><div style="display:grid;grid-template-columns:1fr 2fr;flex:1;background:#1a1a1a"><div style="padding:4px;background:#222">${[70,55,85,40].map(p=>`<div style="margin-bottom:3px;background:#2a2a2a;height:3px;border-radius:1px"><div style="background:${tc};height:3px;width:${p}%;border-radius:1px"></div></div>`).join('')}</div><div style="padding:4px">${[1,2,3].map(()=>`<div style="background:#2a2a2a;height:3px;border-radius:1px;margin-bottom:4px"></div>`).join('')}</div></div>`;}
+    else if(i===1){m.innerHTML=`<div style="padding:5px 6px;border-bottom:2px solid ${tc};background:#1a1a1a;display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:50%;background:${tc}44"></div><div><div style="background:#555;height:3px;width:26px;border-radius:2px;margin-bottom:2px"></div><div style="background:#333;height:2px;width:17px;border-radius:1px"></div></div></div><div style="padding:4px 6px;flex:1;background:#1a1a1a"><div style="background:${tc}22;border-left:2px solid ${tc};height:16px;margin-bottom:4px;border-radius:0 3px 3px 0"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">${[1,2].map(()=>`<div>${[1,2,3].map(()=>`<div style="background:#2a2a2a;height:3px;border-radius:1px;margin-bottom:2px"></div>`).join('')}</div>`).join('')}</div></div>`;}
+    else{m.innerHTML=`<div style="background:${tc};height:30px;padding:4px 5px;display:flex;align-items:center;gap:5px"><div style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.25)"></div><div><div style="background:rgba(255,255,255,0.85);height:3px;width:24px;border-radius:2px;margin-bottom:2px"></div><div style="background:rgba(255,255,255,0.45);height:2px;width:16px;border-radius:1px"></div></div></div><div style="padding:4px 5px;flex:1;background:#1a1a1a"><div style="display:flex;gap:4px;margin-bottom:4px">${[1,2,3].map(()=>`<svg width="15" height="15" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="#333" stroke-width="2"/><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="${tc}" stroke-width="2" stroke-dasharray="21" stroke-dashoffset="7" transform="rotate(-90 7.5 7.5)"/></svg>`).join('')}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">${[1,2].map(()=>`<div>${[1,2].map(()=>`<div style="background:#2a2a2a;height:3px;border-radius:1px;margin-bottom:2px"></div>`).join('')}</div>`).join('')}</div></div>`;}
+  });
+}
+
+/* ---- FULL DARK HTML FOR DOWNLOAD ---- */
+function buildFullHTML(dark){
+  const body=getHTML();
+  const darkCSS=dark?`body{background:#1a1a1a}`:''
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CV — ${v('f-prenom')} ${v('f-nom')}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;${dark?'background:#1a1a1a':''}}
+@media print{body{background:white!important}}
+</style>
+</head>
+<body>${body}</body>
+</html>`;
+}
+
+function exportHTML(){
+  const blob=new Blob([buildFullHTML(true)],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`CV_${v('f-prenom')}_${v('f-nom')}_dark.html`;
+  a.click();
+  showToast('Fichier HTML (thème sombre) téléchargé !');
+}
+
+function exportHTMLLight(){
+  const blob=new Blob([buildFullHTML(false)],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`CV_${v('f-prenom')}_${v('f-nom')}_light.html`;
+  a.click();
+  showToast('Fichier HTML (thème clair) téléchargé !');
+}
+
+function printCV(){
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CV</title><style>*{box-sizing:border-box;margin:0;padding:0}body{margin:0}@media print{body{margin:0}}</style></head><body>${getHTML()}</body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),600);
+}
+
+function copyCode(){
+  navigator.clipboard.writeText(buildFullHTML(true)).then(()=>showToast('Code HTML copié dans le presse-papiers !'));
+}
+
+renderSkillList(); renderEduList(); renderExpList(); render();
+</script>
 </body>
 </html>
